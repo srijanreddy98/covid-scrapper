@@ -49,9 +49,9 @@ main = async () => {
   const boilerpipe = new Boilerpipe({
     extractor: Boilerpipe.Extractor.Article
   });
-  const browser = await puppeteer.launch({headless: false});
+  const browser = await puppeteer.launch();
   // for await( let i = 1; i < 60; i++ )
-  for (let p = 1; p < 3; p++) {
+  for (let p = 61; p < 121; p++) {
     let data = [];
     const page = await browser.newPage();
     await page.setDefaultNavigationTimeout(1200000); 
