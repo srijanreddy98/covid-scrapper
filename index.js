@@ -22,28 +22,32 @@ main = async () => {
         let linkToArt = 'https://' + s.split("href=\"https://")[1].split("\"")[0];
         return {artHead, truthValue, exp, linkToArt};
       }
-      const {linkToPoynter, factCheck, dateLocation} = getHeader(article);
-      let page = await browser.newPage();
-      await page.setDefaultNavigationTimeout(1200000);
-      await page.goto(linkToPoynter);
-      let con2 = await page.content();
-      await page.goto('about:blank')
-      await page.close();
-      con2 = con2.split("<article")[1];
-      const {artHead, truthValue, exp, linkToArt} = getContentAndExplanation(con2.split("</article>")[0]);
-      let pageArt = await browser.newPage();
-      await pageArt.setDefaultNavigationTimeout(1200000);
-      await pageArt.goto(linkToArt);
-      let artCon = await pageArt.content();
-      await pageArt.goto('about:blank')
-      await pageArt.close();
-      boilerpipe.setHtml(artCon);
-      boilerpipe.getText(function(err, articleContent) {
-        if(err) {
-          resolve({factCheck, dateLocation, artHead, truthValue, exp, linkToArt, linkToPoynter, articleContent: "Not Parseable"});
-        }
-        resolve({factCheck, dateLocation, artHead, truthValue, exp, linkToArt, linkToPoynter, articleContent});
-      });
+      try {
+        const {linkToPoynter, factCheck, dateLocation} = getHeader(article);
+        let page = await browser.newPage();
+        await page.setDefaultNavigationTimeout(1200000);
+        await page.goto(linkToPoynter);
+        let con2 = await page.content();
+        await page.goto('about:blank')
+        await page.close();
+        con2 = con2.split("<article")[1];
+        const {artHead, truthValue, exp, linkToArt} = getContentAndExplanation(con2.split("</article>")[0]);
+        let pageArt = await browser.newPage();
+        await pageArt.setDefaultNavigationTimeout(1200000);
+        await pageArt.goto(linkToArt);
+        let artCon = await pageArt.content();
+        await pageArt.goto('about:blank')
+        await pageArt.close();
+        boilerpipe.setHtml(artCon);
+        boilerpipe.getText(function(err, articleContent) {
+          if(err) {
+            resolve({factCheck, dateLocation, artHead, truthValue, exp, linkToArt, linkToPoynter, articleContent: "Not Parseable"});
+          }
+          resolve({factCheck, dateLocation, artHead, truthValue, exp, linkToArt, linkToPoynter, articleContent});
+        });
+      } catch (e) {
+        reject();
+      }
     });
   };
   const boilerpipe = new Boilerpipe({
@@ -51,6 +55,7 @@ main = async () => {
   });
   const browser = await puppeteer.launch();
   // for await( let i = 1; i < 60; i++ )
+  failed = [];
   for (let p = 61; p < 121; p++) {
     let data = [];
     const page = await browser.newPage();
@@ -60,11 +65,16 @@ main = async () => {
     con = con.split("<article");
     for (let i = 1; i < con.length; i++) {
       console.log(`Page: ${p}, Article: ${i}`);
-      data.push(await getData(browser, boilerpipe, con[i].split("</article>")[0]));
+      try {
+        data.push(await getData(browser, boilerpipe, con[i].split("</article>")[0]));
+      } catch(e) {
+        failed.push({page: p, article: i});
+      }
     }
     await page.goto('about:blank')
     await page.close();
     fs.writeFileSync(`./scrap/data${p}.json`, JSON.stringify(data));
+    fs.writeFileSync(`./failed.json`, JSON.stringify(failed));
   }
   await browser.close();
 };
